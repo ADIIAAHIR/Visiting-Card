@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Adi Roy Premium Card - Auto Move</title>
+
+<style>
+body {
+    margin: 0;
+    height: 100vh;
+    /* শুরুতে সাদা ব্যাকগ্রাউন্ড (Front) */
+    background: #ffffff; 
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    overflow: hidden;
+    transition: background 0.8s ease; /* ব্যাকগ্রাউন্ড পরিবর্তনের স্মুথনেস */
+}
+
+canvas {
+    position: absolute;
+    top: 0;
+    left: 0;
+    z-index: 0;
+}
+
+.scene {
+    width: 340px;
+    height: 560px;
+    perspective: 1800px;
+    z-index: 2;
+}
+
+.card {
+    width: 100%;
+    height: 100%;
+    position: relative;
+    transform-style: preserve-3d;
+    transition: transform 0.2s ease-out;
+    border-radius: 30px;
+}
+
+/* কার্ডের চারপাশের গ্লো ইফেক্ট */
+.scene:hover .card {
+    box-shadow: 0 0 40px rgba(255, 59, 48, 0.4),
+                0 0 80px rgba(255, 59, 48, 0.2);
+}
+
+.card-side {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    border-radius: 30px;
+    overflow: hidden;
+    backface-visibility: hidden;
+}
+
+.card-side img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.back {
+    transform: rotateY(180deg);
+}
+</style>
+</head>
+
+<body>
+
+<canvas id="particles"></canvas>
+
+<div class="scene">
+    <div class="card" id="card">
+        <div class="card-side front">
+            <img src="Front.png" alt="Front">
+        </div>
+        <div class="card-side back">
+            <img src="Back.png" alt="Back">
+        </div>
+    </div>
+</div>
+
+<script>
+const card = document.getElementById("card");
+const scene = document.querySelector(".scene");
+
+let currentX = 0;
+let currentY = 0;
+let targetX = 0;
+let targetY = 0;
+let autoTime = 0; // অটো মুভমেন্টের জন্য টাইমার
+
+let baseRotateY = 0;
+let flipped = false;
+let pColor = "rgba(0, 0, 0, 0.6)"; // শুরুতে কালো পার্টিকেল
+
+/* মাউস মুভমেন্ট (ইচ্ছামতো নড়ানোর জন্য) */
+scene.addEventListener("mousemove", (e) => {
+    const rect = scene.getBoundingClientRect();
+    let x = e.clientX - rect.left;
+    let y = e.clientY - rect.top;
+    targetX = ((x / rect.width) - 0.5) * 20;
+    targetY = ((y / rect.height) - 0.5) * -20;
+});
+
+/* মাউস সরিয়ে নিলে টার্গেট রিসেট হবে */
+scene.addEventListener("mouseleave", () => {
+    targetX = 0;
+    targetY = 0;
+});
+
+/* ANIMATION LOOP (এখানেই অটো মুভমেন্টের কাজ হচ্ছে) */
+function animate() {
+    autoTime += 0.03; // নড়াচড়ার গতি
+
+    // স্বয়ংক্রিয়ভাবে কার্ডটিকে একটু দুলানোর জন্য Sine এবং Cosine ব্যবহার করা হয়েছে
+    let tiltX = targetX + Math.sin(autoTime) * 10; 
+    let tiltY = targetY + Math.cos(autoTime) * 10;
+
+    currentX += (tiltX - currentX) * 0.1;
+    currentY += (tiltY - currentY) * 0.1;
+
+    card.style.transform =
+        `rotateY(${baseRotateY + currentX}deg) rotateX(${currentY}deg)`;
+
+    requestAnimationFrame(animate);
+}
+animate();
+
+/* AUTO FLIP & COLOR THEME CHANGE */
+setInterval(() => {
+    flipped = !flipped;
+    baseRotateY = flipped ? 180 : 0;
+
+    if(flipped) {
+        // BACK: ব্যাকগ্রাউন্ড কালো, পার্টিকেল সাদা
+        document.body.style.background = "#050505";
+        pColor = "rgba(255, 255, 255, 0.6)";
+    } else {
+        // FRONT: ব্যাকগ্রাউন্ড সাদা, পার্টিকেল কালো
+        document.body.style.background = "#ffffff";
+        pColor = "rgba(0, 0, 0, 0.6)";
+    }
+}, 5000);
+
+/* PARTICLES BACKGROUND SYSTEM */
+const canvas = document.getElementById("particles");
+const ctx = canvas.getContext("2d");
+
+canvas.width = window.innerWidth;
+canvas.height = window.innerHeight;
+
+let particles = [];
+for (let i = 0; i < 300; i++) {
+    particles.push({
+        x: Math.random() * canvas.width,
+        y: Math.random() * canvas.height,
+        size: Math.random() * 4,
+        speedX: (Math.random() - 0.5) * 0.8,
+        speedY: (Math.random() - 0.5) * 0.8
+    });
+}
+
+function drawParticles() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    particles.forEach(p => {
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+        ctx.fillStyle = pColor; 
+        ctx.fill();
+
+        p.x += p.speedX;
+        p.y += p.speedY;
+
+        if (p.x > canvas.width) p.x = 0;
+        if (p.x < 0) p.x = canvas.width;
+        if (p.y > canvas.height) p.y = 0;
+        if (p.y < 0) p.y = canvas.height;
+    });
+    requestAnimationFrame(drawParticles);
+}
+drawParticles();
+
+window.addEventListener("resize", () => {
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+});
+</script>
+
+</body>
+</html>
